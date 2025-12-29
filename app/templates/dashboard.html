@@ -1,0 +1,589 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ event.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --bg-dark: #0a0a0a;
+        --card-dark: #1a1a1a;
+        --card-darker: #141414;
+        --border-dark: #2d2d2d;
+        --text-light: #ffffff;
+        --text-gray: #9ca3af;
+        --stat-yellow: #fbbf24;
+        --stat-green: #10b981;
+        --stat-red: #ec4899;
+    }
+
+    body {
+        background-color: var(--bg-dark) !important;
+        color: var(--text-light) !important;
+    }
+
+    .dashboard-container {
+        padding: 2rem 0;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .dashboard-header {
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--card-dark);
+        border: 1px solid var(--border-dark);
+        border-radius: 16px;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        line-height: 1;
+    }
+
+    .stat-label {
+        color: var(--text-gray);
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 2rem;
+    }
+
+    .main-content {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .section-card {
+        background: var(--card-dark);
+        border: 1px solid var(--border-dark);
+        border-radius: 16px;
+        padding: 2rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        color: var(--text-light);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-action {
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-import {
+        background: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 100%);
+        color: white;
+    }
+
+    .btn-import:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(6, 182, 212, 0.4);
+    }
+
+    .btn-export {
+        background: white;
+        color: #1a1a1a;
+    }
+
+    .btn-export:hover {
+        background: #f0f0f0;
+        transform: translateY(-2px);
+    }
+
+    .btn-send {
+        background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+        color: white;
+    }
+
+    .btn-send:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(236, 72, 153, 0.4);
+    }
+
+    .guest-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .guest-table thead {
+        border-bottom: 2px solid var(--border-dark);
+    }
+
+    .guest-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-gray);
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .guest-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-dark);
+        color: var(--text-light);
+    }
+
+    .guest-table tbody tr:hover {
+        background: var(--card-darker);
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-yes {
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--stat-green);
+    }
+
+    .status-maybe {
+        background: rgba(251, 191, 36, 0.2);
+        color: var(--stat-yellow);
+    }
+
+    .status-no {
+        background: rgba(236, 72, 153, 0.2);
+        color: var(--stat-red);
+    }
+
+    .status-pending {
+        background: rgba(156, 163, 175, 0.2);
+        color: var(--text-gray);
+    }
+
+    .qr-section {
+        text-align: center;
+    }
+
+    .qr-code-container {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        display: inline-block;
+    }
+
+    .qr-code-container img {
+        width: 200px;
+        height: 200px;
+        display: block;
+    }
+
+    .qr-placeholder {
+        width: 200px;
+        height: 200px;
+        background: #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+    }
+
+    .qr-label {
+        color: var(--text-gray);
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+    }
+
+    .btn-download {
+        background: white;
+        color: #1a1a1a;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.3s ease;
+    }
+
+    .btn-download:hover {
+        background: #f0f0f0;
+        transform: translateY(-2px);
+    }
+
+    .invite-token {
+        background: var(--card-darker);
+        border: 1px solid var(--border-dark);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .token-label {
+        color: var(--text-gray);
+        font-size: 0.75rem;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .token-link {
+        color: #06b6d4;
+        font-size: 0.875rem;
+        word-break: break-all;
+        font-family: monospace;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-gray);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    @media (max-width: 1024px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 640px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container dashboard-container">
+    <div class="dashboard-header">
+        <div>
+            <h1 style="margin-bottom: 0.5rem; font-size: 2rem;">{{ event.title }}</h1>
+            <p style="color: var(--text-gray);">
+                <i class="far fa-calendar"></i> {{ event.event_date or 'Date TBD' }}
+                {% if event.event_time %} at {{ event.event_time }}{% endif %}
+            </p>
+        </div>
+        <a href="/event/{{ event.id }}" target="_blank" class="btn-action btn-export">
+            <i class="fas fa-external-link-alt"></i> View Invite
+        </a>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number" style="color: var(--stat-yellow);" id="stat-views">0</div>
+            <div class="stat-label">Page Views</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color: var(--stat-green);" id="stat-yes">0</div>
+            <div class="stat-label">Confirmed (Yes)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color: var(--stat-yellow);" id="stat-maybe">0</div>
+            <div class="stat-label">Tentative (Maybe)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color: var(--stat-red);" id="stat-no">0</div>
+            <div class="stat-label">Declined (No)</div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="dashboard-grid">
+        <!-- Left Column: Guest List -->
+        <div class="main-content">
+            <div class="section-card">
+                <h3 class="section-title">Guest List</h3>
+
+                <div class="action-buttons">
+                    <label for="csv-upload" class="btn-action btn-import">
+                        <i class="fas fa-file-import"></i> Import CSV
+                    </label>
+                    <input type="file" id="csv-upload" accept=".csv" style="display: none;">
+
+                    <button class="btn-action btn-export" id="export-excel">
+                        <i class="fas fa-file-excel"></i> Export Excel
+                    </button>
+
+                    <button class="btn-action btn-send" id="send-invites">
+                        <i class="fas fa-paper-plane"></i> Send Bulk Invites
+                    </button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="guest-table">
+                        <thead>
+                            <tr>
+                                <th>Guest Name</th>
+                                <th>Contact</th>
+                                <th>Status</th>
+                                <th>Plus Ones</th>
+                                <th>Dietary</th>
+                            </tr>
+                        </thead>
+                        <tbody id="guest-list-body">
+                            <!-- Loaded via JavaScript -->
+                        </tbody>
+                    </table>
+                    <div id="empty-state" class="empty-state" style="display: none;">
+                        <i class="fas fa-users"></i>
+                        <p>No guests found. Import a CSV or send invitations to populate this list.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: QR Code & Invite Token -->
+        <div class="sidebar">
+            <!-- QR Code Section -->
+            <div class="section-card qr-section">
+                <h3 class="section-title">QR Code</h3>
+                <div class="qr-label">Scan to open invitation</div>
+                <div class="qr-code-container" id="qr-container">
+                    <div class="qr-placeholder">
+                        <i class="fas fa-qrcode" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+                <button class="btn-download" id="download-qr">
+                    <i class="fas fa-download"></i> Download QR
+                </button>
+            </div>
+
+            <!-- Invite Token Section -->
+            <div class="section-card">
+                <h3 class="section-title">Invite Token</h3>
+                <div class="token-label">Direct link for this event:</div>
+                <div class="invite-token">
+                    <div class="token-link" id="invite-link">{{ request.url_root }}event/{{ event.id }}</div>
+                </div>
+                <button class="btn-download" id="copy-link">
+                    <i class="fas fa-copy"></i> Copy Link
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const eventId = "{{ event.id }}";
+    const inviteLink = "{{ request.url_root }}event/{{ event.id }}";
+
+    // Load dashboard data on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDashboardStats();
+        loadGuestList();
+        loadQRCode();
+        setupEventListeners();
+    });
+
+    // Load statistics
+    async function loadDashboardStats() {
+        try {
+            const response = await fetch(`/api/events/${eventId}/dashboard_stats`);
+            const stats = await response.json();
+
+            document.getElementById('stat-views').textContent = stats.views || 0;
+            document.getElementById('stat-yes').textContent = stats.rsvp_yes || 0;
+            document.getElementById('stat-maybe').textContent = stats.rsvp_maybe || 0;
+            document.getElementById('stat-no').textContent = stats.rsvp_no || 0;
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    }
+
+    // Load guest list
+    async function loadGuestList() {
+        try {
+            const response = await fetch(`/api/events/${eventId}/guests`);
+            const guests = await response.json();
+
+            const tbody = document.getElementById('guest-list-body');
+            const emptyState = document.getElementById('empty-state');
+
+            if (guests.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tbody.innerHTML = guests.map(guest => `
+                <tr>
+                    <td>${guest.name || 'Anonymous'}</td>
+                    <td>${guest.email || guest.phone || '-'}</td>
+                    <td>
+                        <span class="status-badge status-${(guest.rsvp_status || 'pending').toLowerCase()}">
+                            ${guest.rsvp_status || 'Pending'}
+                        </span>
+                    </td>
+                    <td>${guest.plus_one_count || 0}</td>
+                    <td>${guest.dietary_restrictions || '-'}</td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.error('Error loading guests:', error);
+        }
+    }
+
+    // Load QR Code
+    async function loadQRCode() {
+        try {
+            const response = await fetch(`/api/events/${eventId}/qrcode`);
+            const data = await response.json();
+
+            if (data.qr_code_url) {
+                const qrContainer = document.getElementById('qr-container');
+                qrContainer.innerHTML = `<img src="${data.qr_code_url}" alt="QR Code">`;
+            }
+        } catch (error) {
+            console.error('Error loading QR code:', error);
+        }
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+        // CSV Import
+        document.getElementById('csv-upload').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`/api/events/${eventId}/guests/import`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert(`Successfully imported ${result.count} guests`);
+                    loadGuestList();
+                    loadDashboardStats();
+                } else {
+                    alert('Error importing CSV: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error importing CSV: ' + error.message);
+            }
+
+            e.target.value = ''; // Reset file input
+        });
+
+        // Export Excel
+        document.getElementById('export-excel').addEventListener('click', () => {
+            window.location.href = `/api/events/${eventId}/guests/export?format=excel`;
+        });
+
+        // Send Bulk Invites
+        document.getElementById('send-invites').addEventListener('click', async () => {
+            if (!confirm('Send invitations to all guests with email addresses?')) return;
+
+            try {
+                const response = await fetch(`/api/events/${eventId}/send-invitations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert(`Invitations sent! ${result.stats.sent} sent, ${result.stats.failed} failed`);
+                    loadGuestList();
+                } else {
+                    alert('Error sending invitations: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error sending invitations: ' + error.message);
+            }
+        });
+
+        // Download QR Code
+        document.getElementById('download-qr').addEventListener('click', async () => {
+            try {
+                const response = await fetch(`/api/events/${eventId}/qrcode`);
+                const data = await response.json();
+
+                if (data.qr_code_url) {
+                    const link = document.createElement('a');
+                    link.href = data.qr_code_url;
+                    link.download = `qr-code-${eventId}.png`;
+                    link.click();
+                }
+            } catch (error) {
+                alert('Error downloading QR code: ' + error.message);
+            }
+        });
+
+        // Copy Link
+        document.getElementById('copy-link').addEventListener('click', () => {
+            navigator.clipboard.writeText(inviteLink).then(() => {
+                const btn = document.getElementById('copy-link');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy link');
+            });
+        });
+    }
+</script>
+{% endblock %}

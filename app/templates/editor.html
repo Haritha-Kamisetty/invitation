@@ -1,0 +1,584 @@
+{% extends "base.html" %}
+
+{% block title %}Customize Your Invitation - Invitee{% endblock %}
+
+{% block extra_css %}
+<style>
+    .editor-layout {
+        display: grid;
+        grid-template-columns: 400px 1fr;
+        height: calc(100vh - 73px);
+        /* Minus navbar */
+    }
+
+    /* Prevent body scroll to hide footer overlap issues and keep full-screen feel */
+    body {
+        overflow: hidden;
+    }
+
+    .editor-panel {
+        background: #111827;
+        border-right: 1px solid #374151;
+        padding: 2rem;
+        overflow-y: auto;
+    }
+
+    .preview-panel {
+        background: var(--bg-light);
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        /* Changed from center to allow scrolling */
+        overflow-y: auto;
+    }
+
+    .device-mockup {
+        background: transparent;
+        border-radius: var(--radius-lg);
+        box-shadow: none;
+        max-width: 400px;
+        width: 100%;
+        min-height: 600px;
+        padding: 2rem;
+        position: relative;
+        transition: all 0.3s;
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        background-position: center;
+        margin: auto;
+        /* Centers content when it fits, allows scroll when it doesn't */
+    }
+
+    .device-mockup.mobile {
+        max-width: 375px;
+    }
+
+    .device-mockup.desktop {
+        max-width: 800px;
+    }
+
+    .device-mockup.a4 {
+        width: 210mm;
+        min-height: 297mm;
+        max-width: 100%;
+        padding: 2cm;
+        /* A4 allows full bleed or specific margins inside content */
+    }
+
+    .preview-controls {
+        margin-bottom: 1rem;
+        display: flex;
+        gap: 1rem;
+    }
+
+    .invite-preview-content {
+        text-align: center;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 1.5rem;
+    }
+
+    .preview-header img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-radius: var(--radius-md);
+        margin-bottom: 1.5rem;
+    }
+
+    /* Map Picker Styles */
+    #map-picker {
+        height: 250px;
+        width: 100%;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-color);
+        margin-top: 0.5rem;
+        z-index: 1;
+        /* Ensure it stays below other potentially overlapping elements if any, roughly */
+    }
+
+    .leaflet-control-geocoder {
+        z-index: 1000;
+    }
+
+    /* Fix for button visibility on light editor background */
+    .preview-controls .btn-outline {
+        color: var(--text-primary);
+        border-color: var(--text-secondary);
+        background: white;
+    }
+
+    .preview-controls .btn-outline:hover,
+    .preview-controls .btn-outline.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- Print/Download Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<style>
+    /* Custom Dropdown Styling */
+    .download-dropdown-menu {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        list-style: none;
+        padding: 0.5rem 0;
+        margin: 0.5rem 0 0;
+        z-index: 1000;
+        min-width: 200px;
+    }
+
+    .download-dropdown-menu.show {
+        display: block;
+    }
+
+    .download-dropdown-menu li {
+        padding: 0;
+        margin: 0;
+    }
+
+    .download-dropdown-menu a {
+        display: block;
+        padding: 0.5rem 1rem;
+        color: var(--text-primary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: background 0.2s;
+        cursor: pointer;
+    }
+
+    .download-dropdown-menu a:hover {
+        background: var(--bg-light);
+        color: var(--primary);
+    }
+
+    .download-dropdown-menu i {
+        margin-right: 0.5rem;
+        width: 16px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block footer %}
+<!-- Footer hidden for editor interface -->
+{% endblock %}
+
+{% block content %}
+<div class="editor-layout">
+    <!-- Left Panel: Editor Form -->
+    <div class="editor-panel">
+        <div style="margin-bottom: 2rem;">
+            <a href="/" class="text-secondary" style="font-size: 0.9rem;"><i class="fas fa-arrow-left"></i> Back to
+                Templates</a>
+            <h2 style="margin-top: 1rem;">Customize Invitation</h2>
+        </div>
+
+        <form id="editor-form">
+            <input type="hidden" id="template_id" name="template_id" value="{{ template_id }}">
+            <input type="hidden" id="type" name="type">
+            <input type="hidden" id="background_image_url" name="background_image_url" value="">
+            <input type="hidden" id="background_style" name="background_style" value="">
+            <input type="hidden" id="final_host_name" name="host_name" value="">
+            <input type="hidden" id="final_partner_name" name="partner_name" value="">
+
+            <!-- Category Specific Sections -->
+
+            <!-- 1. Wedding Section -->
+            <div id="form-wedding" class="category-section" style="display:none;">
+                <h4 style="margin-bottom: 1rem; color: var(--primary);">Wedding Details</h4>
+                <div class="form-group">
+                    <label class="form-label">Groom Name <span style="color:var(--danger)">*</span></label>
+                    <input type="text" class="form-control" name="groom_name" placeholder="Enter groom name"
+                        data-map-to="host_name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Bride Name <span style="color:var(--danger)">*</span></label>
+                    <input type="text" class="form-control" name="bride_name" placeholder="Enter bride name"
+                        data-map-to="partner_name">
+                </div>
+
+                <!-- Photos -->
+                <div class="form-group">
+                    <label class="form-label">Groom Photo</label>
+                    <input type="file" class="form-control" id="groom-photo-upload" accept="image/*"
+                        data-target="groom">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Bride Photo</label>
+                    <input type="file" class="form-control" id="bride-photo-upload" accept="image/*"
+                        data-target="bride">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Groom's Parents</label>
+                    <input type="text" class="form-control" name="groom_parents" placeholder="Groom's Father & Mother"
+                        data-append-to="message">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Bride's Parents</label>
+                    <input type="text" class="form-control" name="bride_parents" placeholder="Bride's Father & Mother"
+                        data-append-to="message">
+                </div>
+            </div>
+
+            <!-- 2. Birthday Section -->
+            <div id="form-birthday" class="category-section" style="display:none;">
+                <h4 style="margin-bottom: 1rem; color: var(--primary);">Birthday Details</h4>
+                <div class="form-group">
+                    <label class="form-label">Birthday Person Name <span style="color:var(--danger)">*</span></label>
+                    <input type="text" class="form-control" name="bday_person" placeholder="Enter name"
+                        data-map-to="host_name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Turning Age</label>
+                    <input type="text" class="form-control" name="age" placeholder="e.g. 1st, 18th, 50th"
+                        data-append-to="title">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Party Theme</label>
+                    <input type="text" class="form-control" name="theme" placeholder="e.g. Jungle Safari, Princess"
+                        data-append-to="message">
+                </div>
+                <!-- Generic Photo for Birthday -->
+                <div class="form-group">
+                    <label class="form-label">Photo</label>
+                    <input type="file" class="form-control generic-photo-upload" accept="image/*">
+                </div>
+            </div>
+
+            <!-- 3. Anniversary Section -->
+            <div id="form-anniversary" class="category-section" style="display:none;">
+                <h4 style="margin-bottom: 1rem; color: var(--primary);">Anniversary Details</h4>
+                <div class="form-group">
+                    <label class="form-label">Couple Names <span style="color:var(--danger)">*</span></label>
+                    <input type="text" class="form-control" name="couple_names" placeholder="e.g. John & Jane"
+                        data-map-to="host_name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Years Together</label>
+                    <input type="text" class="form-control" name="years_together" placeholder="e.g. 25 Years"
+                        data-append-to="title">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Couple Photo</label>
+                    <input type="file" class="form-control generic-photo-upload" accept="image/*">
+                </div>
+            </div>
+
+            <!-- 4. Baby Shower Section -->
+            <div id="form-baby" class="category-section" style="display:none;">
+                <h4 style="margin-bottom: 1rem; color: var(--primary);">Baby Shower Details</h4>
+                <div class="form-group">
+                    <label class="form-label">Parent(s) Name <span style="color:var(--danger)">*</span></label>
+                    <input type="text" class="form-control" name="parents_name" placeholder="Enter parents name"
+                        data-map-to="host_name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Baby Name (if decided)</label>
+                    <input type="text" class="form-control" name="baby_name" placeholder="Enter baby name"
+                        data-append-to="message">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Baby Gender</label>
+                    <select class="form-control" name="baby_gender" data-append-to="message">
+                        <option value="">Select gender</option>
+                        <option value="Boy">Boy</option>
+                        <option value="Girl">Girl</option>
+                        <option value="Surprise">Surprise / Neutral</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Photo</label>
+                    <input type="file" class="form-control generic-photo-upload" accept="image/*">
+                </div>
+            </div>
+
+            <!-- 5. Default/Fallback -->
+            <div id="form-generic" class="category-section">
+                <div class="form-group">
+                    <label class="form-label">Event Title</label>
+                    <input type="text" class="form-control" name="title" placeholder="e.g. Gala Dinner">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Host Name</label>
+                    <input type="text" class="form-control" name="host_name_generic" data-map-to="host_name"
+                        placeholder="Who is hosting?">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Photo</label>
+                    <input type="file" class="form-control generic-photo-upload" accept="image/*">
+                </div>
+            </div>
+
+            <!-- Hidden Inputs to Map to Backend Standard Fields -->
+            <!-- Hidden Inputs to Map to Backend Standard Fields: Managed at top of form -->
+            <!-- Stores 2nd image or style layout -->
+
+            <div class="grid grid-cols-2" style="gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-control" name="event_date" data-preview="event_date">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Time</label>
+                    <input type="time" class="form-control" name="event_time" data-preview="event_time">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Venue & Location</label>
+                <input type="text" class="form-control" name="venue" id="venue-input" data-preview="venue"
+                    placeholder="Search address or drag pin..." autocomplete="off">
+                <div id="map-picker"></div>
+                <small class="text-muted" style="font-size: 0.8rem; display: block; margin-top: 0.25rem;">
+                    <i class="fas fa-info-circle"></i> Type address to search, then <strong>drag the pin</strong> to
+                    the
+                    exact entrance/location.
+                </small>
+
+                <!-- Hidden inputs for coordinates -->
+                <input type="hidden" name="venue_latitude" id="venue_latitude">
+                <input type="hidden" name="venue_longitude" id="venue_longitude">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Dress Code (Optional)</label>
+                <input type="text" class="form-control" name="dress_code" data-preview="dress_code"
+                    placeholder="e.g. Black Tie, Casual">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Custom Message</label>
+                <textarea class="form-control" name="message" rows="4" data-preview="message"
+                    placeholder="Add a personal note..."></textarea>
+            </div>
+
+            <!-- Contact Information Section -->
+            <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--border-color);">
+                <h4 style="margin-bottom: 1rem; color: var(--text-primary);">
+                    <i class="fas fa-address-book" style="color: var(--primary); margin-right: 0.5rem;"></i>
+                    Contact Information
+                </h4>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+                    Guests can use these details to contact you. Leave blank to use your profile contact info.
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label">Contact Email (Optional)</label>
+                    <input type="email" class="form-control" name="contact_email" placeholder="email@example.com">
+                    <small style="color: #666; font-size: 0.85rem;">Will be displayed on invitation footer</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Contact Phone (Optional)</label>
+                    <input type="tel" class="form-control" name="contact_phone" placeholder="+91 98765 43210">
+                    <small style="color: #666; font-size: 0.85rem;">Will be displayed on invitation footer</small>
+                </div>
+            </div>
+
+            <!-- Hidden Inputs for JS Logic -->
+            <input type="hidden" name="template_id" id="template_id" value="{{ template_id }}">
+            <input type="hidden" name="background_style" id="background_style">
+            <input type="hidden" name="final_background_style" id="final_background_style">
+            <input type="hidden" name="background_image_url" id="background_image_url">
+            <input type="hidden" name="final_host_name" id="final_host_name">
+            <input type="hidden" name="final_partner_name" id="final_partner_name">
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                <i class="fas fa-check"></i> Create & Share
+            </button>
+        </form>
+    </div>
+
+    <!-- Right Panel: Live Preview -->
+    <div class="preview-panel">
+        <div class="preview-controls">
+            <button class="btn btn-outline btn-sm" onclick="setPreviewMode('mobile')"><i class="fas fa-mobile-alt"></i>
+                Mobile</button>
+            <button class="btn btn-outline btn-sm" onclick="setPreviewMode('desktop')"><i class="fas fa-desktop"></i>
+                Desktop</button>
+            <button class="btn btn-outline btn-sm active" onclick="setPreviewMode('a4')"><i class="fas fa-print"></i>
+                A4 / Full</button>
+            <!-- Custom Robust Dropdown (User Requested: Click -> Show Options) -->
+            <div style="position: relative; display: inline-block; margin-left: auto;">
+                <button class="btn btn-primary btn-sm" onclick="toggleCustomDropdown()" id="customDownloadBtn">
+                    <i class="fas fa-download"></i> Download
+                </button>
+
+                <!-- Custom Menu (Hidden by default) -->
+                <div id="customDownloadMenu" style="
+                    display: none;
+                    position: absolute;
+                    right: 0;
+                    top: 100%;
+                    background: white;
+                    border: 1px solid #ddd;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    border-radius: 4px;
+                    min-width: 160px;
+                    z-index: 1000;
+                    margin-top: 5px;
+                ">
+                    <div onclick="downloadPreview('png')"
+                        style="padding: 10px 15px; cursor: pointer; color: #333; border-bottom: 1px solid #eee; display: flex; align-items: center;">
+                        <i class="fas fa-image" style="margin-right: 10px; width: 20px;"></i> Image (PNG)
+                    </div>
+                    <div onclick="downloadPreview('pdf')"
+                        style="padding: 10px 15px; cursor: pointer; color: #333; border-bottom: 1px solid #eee; display: flex; align-items: center;">
+                        <i class="fas fa-file-pdf" style="margin-right: 10px; width: 20px;"></i> PDF Document
+                    </div>
+                    <div onclick="downloadPreview('word')"
+                        style="padding: 10px 15px; cursor: pointer; color: #333; display: flex; align-items: center;">
+                        <i class="fas fa-file-word" style="margin-right: 10px; width: 20px;"></i> Word Document
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+        <div id="preview-container" class="device-mockup a4">
+            <div class="invite-preview-content">
+                <div class="preview-header">
+                    <img id="preview-image" src="" alt="Header">
+                </div>
+
+                <div class="preview-body">
+                    <h1 id="preview-title"
+                        style="font-family: var(--font-serif); font-size: 2rem; margin-bottom: 0.5rem; color: var(--text-primary);">
+                    </h1>
+
+                    <p id="preview-text"
+                        style="white-space: pre-line; margin-bottom: 2rem; color: var(--text-secondary);"></p>
+
+                    <div id="preview-details-box"
+                        style="background: var(--bg-light); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 2rem;">
+                        <p><strong>When:</strong> <span id="preview-date"></span> at <span id="preview-time"></span>
+                        </p>
+                        <p><strong>Where:</strong> <span id="preview-venue"></span></p>
+                    </div>
+
+                    <button class="btn btn-primary" style="pointer-events: none; opacity: 0.8;">RSVP Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+    // --- Leaflet Map Implementation ---
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize Map
+        const map = L.map('map-picker').setView([20.5937, 78.9629], 5); // Default to India center
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        let marker;
+        const venueInput = document.getElementById('venue-input');
+        const latInput = document.getElementById('venue_latitude');
+        const lngInput = document.getElementById('venue_longitude');
+
+        // Custom Icon to look professional
+        const customIcon = L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        function updateMarker(lat, lng, zoom = 15) {
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+            } else {
+                marker = L.marker([lat, lng], {
+                    draggable: true,
+                    icon: customIcon
+                }).addTo(map);
+
+                // Update inputs when dragged
+                marker.on('dragend', function (e) {
+                    const pos = e.target.getLatLng();
+                    latInput.value = pos.lat;
+                    lngInput.value = pos.lng;
+                    // Reverse geocode could go here to update text, but maybe annoying if user just wants to fix pin
+                });
+            }
+            map.flyTo([lat, lng], zoom);
+            latInput.value = lat;
+            lngInput.value = lng;
+        }
+
+        // Debounce search function
+        let timeoutId;
+        venueInput.addEventListener('input', function () {
+            clearTimeout(timeoutId);
+            const query = this.value;
+
+            // Basic preview update
+            const previewEl = document.getElementById('preview-venue');
+            if (previewEl) previewEl.textContent = query;
+
+            if (query.length < 3) return;
+
+            timeoutId = setTimeout(() => {
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.length > 0) {
+                            const result = data[0];
+                            updateMarker(result.lat, result.lon);
+                        }
+                    })
+                    .catch(err => console.error('Geocoding error:', err));
+            }, 1000); // Wait 1 sec after typing stops
+        });
+
+        // Try to get user location on load
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(position => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                updateMarker(lat, lng, 12);
+
+                // Reverse geocode to get address and populate venue input
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.display_name) {
+                            venueInput.value = data.display_name;
+                            // Update preview as well
+                            const previewEl = document.getElementById('preview-venue');
+                            if (previewEl) previewEl.textContent = data.display_name;
+                        }
+                    })
+                    .catch(err => console.error('Reverse geocoding error:', err));
+            });
+        }
+    });
+</script>
+{% endblock %}

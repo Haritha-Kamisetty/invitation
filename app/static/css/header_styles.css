@@ -1,0 +1,14 @@
+/* Category Headers Visibility */
+.category-title {
+    color: #1f2937;
+    background: transparent;
+    padding: 10px 20px;
+    border-radius: 30px;
+    box-shadow: none;
+    text-shadow: none;
+    display: inline-block;
+    margin-top: 2rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    letter-spacing: 0.5px;
+}

@@ -1,0 +1,10 @@
+Flask
+Flask-SQLAlchemy
+Flask-Login
+qrcode[pil]
+Pillow
+openpyxl
+pandas
+flask-mail
+python-dotenv
+requests
